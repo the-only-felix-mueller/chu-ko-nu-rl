@@ -1,0 +1,8 @@
+# Generated files:
+package-lock.json
+node_modules/
+dist/
+
+# Editor related files:  (Should these be ignored?)
+.vscode
+workspace-conf.code-workspace
