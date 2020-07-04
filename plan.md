@@ -7,6 +7,8 @@
 - Enemies follow/charge the player
 - Healthpoints for enemies and player
 - Field of View
+- Animated projetiles ('world' model/logic decides if the bolt misses, UI draws it)
+- Animated floor tiles (flowing water, flickering torches?)
 - Ammunition is consumed and can be picked up from the floor (How do I indicate when an entity stands on top of items? Blinking? Background-color?)
 - Different bolt types (fire, poison, knockback, durable, rope)
 - Upgradeable crossbow (magazine size, accuracy, ...)
