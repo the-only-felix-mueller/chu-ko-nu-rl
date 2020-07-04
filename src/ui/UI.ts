@@ -145,7 +145,6 @@ export class UI {
             
             this.isPlayerTurn = true;
             document.getElementById("player-turn-indicator").innerHTML = "press a key";
-            // FIXME This doesn't work if the player presses "D" or "Q" (non-action functionalities)
             await this.playerActionEventPromise();
             document.getElementById("player-turn-indicator").innerHTML = "wait...";
             this.world.playerTurn();

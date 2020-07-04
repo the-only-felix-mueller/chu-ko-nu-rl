@@ -43,7 +43,6 @@ export class World {
 
     turn(): void {
         this.turnCounter++;
-        //wander(this);
         movement(this);
     }
 

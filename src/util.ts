@@ -1,5 +1,5 @@
-
 export class IDManager {
+    // TODO test this class
     max: number;
     skipped: number[];
 

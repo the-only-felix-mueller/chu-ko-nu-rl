@@ -9,7 +9,6 @@ export function player(id: EntityID, comps: EntityComponents): void {
 
 export function goblin(id: EntityID, comps: EntityComponents): void {
     comps.appearance.set(id, EntityAppearance.GOBLIN);
-    //comps.wanderer.add(id);
     comps.movementStrategy.set(id, MovementStrategy.WANDERING);
 }
 
