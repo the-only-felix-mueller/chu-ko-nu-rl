@@ -103,6 +103,10 @@ export class UI {
                     case ROT.KEYS.VK_PERIOD:
                         this.world.playerAction = actions.wait();
                         break;
+                    default:
+                        // The pressed key has no meaning, neither player action nor otherwise.
+                        // Prevent the dispatch of 'player-action-evt'.
+                        return;
                 }
                 // After any in-game action: Notify the game loop to start the world-turn.
                 dispatchEvent(new Event('player-action-evt'));
