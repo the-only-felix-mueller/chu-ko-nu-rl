@@ -14,5 +14,5 @@ Some planned features can be seen in [plan.md](./plan.md).
 
 1. Install npm, the Node Package Manager
 2. `npm install`  -- Installs the libraries specified in package.json.
-3. `npm run dev-build` -- Compiles the code using Webpack and tsc, the TypeScript compiler.
+3. `npm run build` -- Compiles the code using Webpack and tsc, the TypeScript compiler.
 4. Open `./dist/index.html` in a web browser.
