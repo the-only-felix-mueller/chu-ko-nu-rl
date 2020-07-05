@@ -24,4 +24,3 @@
 - Address TODO's sprinkled around the code
 - Thoroughly test movement system
 - Mouse support
-- Use standardx style checking. I tried it and it has some rules I'm not yet comfortable with. E.g. it want's indentation by two spaces and a space before parameter lists in function definitions. It also wants to get rid of any unnecessary semicolons. I'll have to make the editor aware of these conventions or maybe change them.
