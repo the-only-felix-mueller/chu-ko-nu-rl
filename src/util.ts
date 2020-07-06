@@ -1,3 +1,5 @@
+import { UI } from "./ui/UI";
+
 export class IDManager {
   // TODO test this class
   max: number;
@@ -49,4 +51,33 @@ export class IDManager {
 
 export function sleep (milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
+
+/**
+ * This function modyfies other functions to avoid a bit of code duplication.
+ *
+ * The `innerFunction` sets up an event handler and eventually passes
+ * a result to the 'then' function, it was passed as an argument.
+ *
+ * The resulting *modified* function creates a `Promise` that sets up
+ * the event listener by calling `innerFunction`.
+ *
+ * @param ui The `keydownHandler` of this `ui` should be installed when the process of `innerFunction` has returned a result.
+ * @param innerFunction This function sets up the process that will eventually pass a result to it's `then` parameter.
+ */
+export function createKeydownPromise<T> (
+  ui: UI,
+  innerFunction: (then: ((result: T) => void)) => void
+): () => Promise<T> {
+  // TODO Is this the "function decorator" pattern?  Is there an @-notation, like in Python?
+  return () => {
+    return new Promise<T>(resolve => {
+      innerFunction((result: T) => {
+        // The result of innerFunction becomes the result of the Promise,
+        // but only after resetting the keydown-handler to default.
+        ui.keydownHandler = (evt) => ui.defaultKeydownHandler(evt)
+        resolve(result)
+      })
+    })
+  }
 }

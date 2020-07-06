@@ -8,11 +8,11 @@ import { movement } from './movement.system'
 
 export class World {
   readonly comps: EntityComponents;
-  private readonly entityManager: EntityManager;
+  readonly entityManager: EntityManager;
   readonly dimensions: Vector;
   readonly map: Dense2DArray<TileType>;
   turnCounter: number;
-  playerAction: actions.Action; // Callback function that gets executed, when "playerTurn" is called.
+  events: string[] = [] // Things that happened, that aren't encoded is entities or tiles.
 
   constructor () {
     this.comps = new EntityComponents()
@@ -46,7 +46,8 @@ export class World {
     movement(this)
   }
 
-  playerTurn () {
-    this.playerAction(this)
+  playerTurn (playerAction: actions.Action) {
+    // `playerAction` could be an enum, but I think a simple callback is preferable to enum + switch statement.
+    playerAction(this)
   }
 }

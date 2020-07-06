@@ -3,32 +3,32 @@ import { Vector, Direction, directions } from '../geometry'
 import * as actions from '../world/actions'
 import * as appearances from './appearances'
 import * as ROT from 'rot-js'
-import { sleep } from '../util'
+import { sleep, createKeydownPromise } from '../util'
 import { TileAppearance } from '../world/tiles'
 import { EntityAppearance } from '../world/entities'
-/* global Event, alert, addEventListener, dispatchEvent */
 
 export class UI {
-  readonly display: ROT.Display;
-  readonly world: World;
-  private readonly dimensions: Vector;
-  private readonly center: Vector;
-  private isPlayerTurn: boolean;
-  afterPlayerActionCallback: (act: actions.Action) => Promise<void>;
+  readonly display: ROT.Display
+  readonly world: World
+  private readonly dimensions: Vector
+  private readonly center: Vector
+  keydownHandler: (evt: KeyboardEvent) => Promise<void>
 
   constructor () {
     this.dimensions = new Vector(60, 30)
     this.center = new Vector(this.dimensions.x / 2, this.dimensions.y / 2)
     this.display = new ROT.Display({ width: this.dimensions.x, height: this.dimensions.y })
     this.world = new World()
-    this.isPlayerTurn = true
+    this.keydownHandler = this.defaultKeydownHandler
   }
 
+  // TODO put this in geometry.ts
   private absToRel (absolutePos: Vector): Vector {
     // Camera is centered on player character.
     return absolutePos.sub(this.world.getPlayerPos()).add(this.center)
   }
 
+  // TODO put this in geometry.ts
   private relToAbs (relativePos: Vector): Vector {
     // Camera is centered on player character.
     return relativePos.add(this.world.getPlayerPos()).sub(this.center)
@@ -40,6 +40,20 @@ export class UI {
   }
 
   draw (): void {
+    while (this.world.events.length > 0) {
+      switch (this.world.events.shift()) {
+        case "shot":
+          console.log('"PFRRRR"')
+          break
+        case "hit":
+          console.log('"AAAARG!"')
+          break
+        case "miss":
+          console.log('"plink"')
+          break          
+      }
+    }
+
     for (let y = 0; y < this.dimensions.y; y++) {
       for (let x = 0; x < this.dimensions.x; x++) {
         const absolutePos = this.relToAbs(new Vector(x, y))
@@ -59,60 +73,37 @@ export class UI {
     }
   }
 
-  handleKeypress (evt: KeyboardEvent): void {
-    // Handle keydown-events, that are allowed to happen, when it's not the players turn:
-    switch (evt.keyCode) {
-      case ROT.KEYS.VK_Q:
-        alert('Goodbye!')
-        break
-      case ROT.KEYS.VK_D: { // "debug"
-        const abovePlayerPos = this.world.getPlayerPos().add(new Vector(0, -1))
-        const tile = TileAppearance[this.world.map.get(abovePlayerPos).appearance]
-        const c = this.world.comps
-        const entityAbove = c.position.atPosition(abovePlayerPos)
-        const entity = EntityAppearance[c.appearance.get(entityAbove)]
-        console.log(`Above: ${entity} on ${tile}`)
-        break
-      }
-      default: {
-        // Handle in-game actions:
-        if (!this.isPlayerTurn) {
-          // In-game actions are only handled when it's the players turn.
-          return
+  async defaultKeydownHandler (evt: KeyboardEvent): Promise<void> {
+    // Handle keydown-events, that are allowed to happen, when the game doesn't expect any other specific commands:
+    return new Promise(async resolve => {
+      switch (evt.keyCode) {
+        case ROT.KEYS.VK_Q:
+          window.alert('Goodbye!')
+          break
+        case ROT.KEYS.VK_D: { // "debug"
+          const abovePlayerPos = this.world.getPlayerPos().add(new Vector(0, -1))
+          const tile = TileAppearance[this.world.map.get(abovePlayerPos).appearance]
+          const c = this.world.comps
+          const entityAbove = c.position.atPosition(abovePlayerPos)
+          const entity = EntityAppearance[c.appearance.get(entityAbove)]
+          console.log(`Above: ${entity} on ${tile}`)
+          break
         }
-        this.isPlayerTurn = false
-
-        switch (evt.keyCode) {
-          case ROT.KEYS.VK_RIGHT:
-            this.world.playerAction = actions.walk(Direction.EAST)
-            break
-          case ROT.KEYS.VK_LEFT:
-            this.world.playerAction = actions.walk(Direction.WEST)
-            break
-          case ROT.KEYS.VK_DOWN:
-            this.world.playerAction = actions.walk(Direction.SOUTH)
-            break
-          case ROT.KEYS.VK_UP:
-            this.world.playerAction = actions.walk(Direction.NORTH)
-            break
-          case ROT.KEYS.VK_F: // "fire"
-            // this.world.act(actions.shoot);
-            break
-          case ROT.KEYS.VK_PERIOD:
-            this.world.playerAction = actions.wait()
-            break
-          default:
-            // The pressed key has no meaning, neither player action nor otherwise.
-            // Prevent the dispatch of 'player-action-evt'.
-            return
+        case ROT.KEYS.VK_P: { // "pause"
+          for (let i = 5; i > 0; i--) {
+            console.log(i.toString())
+            await sleep(1000)
+          }
+          console.log('continue')          
+          break
         }
-        // After any in-game action: Notify the game loop to start the world-turn.
-        dispatchEvent(new Event('player-action-evt'))
       }
-    }
+      resolve()
+    })
   }
 
   async shoot (direction: Direction): Promise<void> {
+    // TODO adapt this for diagonal shots
     const vec = directions[direction]
     let pos = this.world.getPlayerPos()
 
@@ -121,19 +112,14 @@ export class UI {
       pos = pos.add(vec)
       this.drawAt(pos, '*', null, null)
       await sleep(200)
-      this.draw() // TODO don't redraw everything
+      this.draw() // TODO don't redraw *everything*
     }
   }
 
-  async playerActionEventPromise () {
-    // When 'player-action-evt' happens / is dispatched, the resolve-part
-    // of this Promise will be called.
-    return new Promise(resolve => {
-      addEventListener('player-action-evt', resolve)
-    })
-  }
-
   async mainLoop () {
+    const playerTurnIndicator = document.getElementById('player-turn-indicator')
+    const turnCounter = document.getElementById('turn-counter')
+
     while (true) {
       // Every third turn is a playerTurn.
       // Fast enemies act every world-turn,
@@ -143,21 +129,83 @@ export class UI {
       this.draw()
       await sleep(400)
 
-      this.isPlayerTurn = true
-      document.getElementById('player-turn-indicator').innerHTML = 'press a key'
-      await this.playerActionEventPromise()
-      document.getElementById('player-turn-indicator').innerHTML = 'wait...'
-      this.world.playerTurn()
+      playerTurnIndicator.innerHTML = 'press a key'
+      const playerAction = await this.waitForPlayerAction()
+      playerTurnIndicator.innerHTML = 'wait...'
+      this.world.playerTurn(playerAction)
       this.draw()
       await sleep(400)
 
       this.world.turn()
-      document.getElementById('turn-counter').innerHTML = this.world.turnCounter.toString()
+      turnCounter.innerHTML = this.world.turnCounter.toString()
       this.draw()
       await sleep(400)
 
       this.world.turn()
-      document.getElementById('turn-counter').innerHTML = this.world.turnCounter.toString()
+      turnCounter.innerHTML = this.world.turnCounter.toString()
     }
   }
+
+  waitForPlayerAction = createKeydownPromise<actions.Action>(this, then => {
+    this.keydownHandler = async (evt: KeyboardEvent) => {
+      switch (evt.keyCode) {
+        case ROT.KEYS.VK_RIGHT:
+          then(actions.walk(Direction.EAST))
+          break
+        case ROT.KEYS.VK_LEFT:
+          then(actions.walk(Direction.WEST))
+          break
+        case ROT.KEYS.VK_DOWN:
+          then(actions.walk(Direction.SOUTH))
+          break
+        case ROT.KEYS.VK_UP:
+          then(actions.walk(Direction.NORTH))
+          break
+        case ROT.KEYS.VK_F: { // "fire"
+          const target = await this.waitForTargeting()
+          then(actions.shoot(target))
+          break
+        }
+        case ROT.KEYS.VK_PERIOD:
+          then(actions.wait())
+          break
+        default:
+          await this.defaultKeydownHandler(evt)
+      }
+    }
+  })
+
+  waitForTargeting = createKeydownPromise<Vector>(this, then => {
+    let crosshairPos = this.world.getPlayerPos()
+    this.drawAt(crosshairPos, 'X', 'red', null)
+
+    this.keydownHandler = async (evt: KeyboardEvent) => {
+      switch (evt.keyCode) {
+        // TODO 'ESC' to cancel targeting
+        // TODO create function 'keyToDirectionVector'
+        case ROT.KEYS.VK_UP:
+          crosshairPos = crosshairPos.add(directions[Direction.NORTH])
+          break
+        case ROT.KEYS.VK_DOWN:
+          crosshairPos = crosshairPos.add(directions[Direction.SOUTH])
+          break
+        case ROT.KEYS.VK_LEFT:
+          crosshairPos = crosshairPos.add(directions[Direction.WEST])
+          break
+        case ROT.KEYS.VK_RIGHT:
+          crosshairPos = crosshairPos.add(directions[Direction.EAST])
+          break
+        case ROT.KEYS.VK_F: // 'Fire'
+          if (crosshairPos !== this.world.getPlayerPos()) {
+            then(crosshairPos)
+          } else {
+            console.log('You can\'t shoot yourself.')
+          }
+        default:
+          await this.defaultKeydownHandler(evt)
+      }
+      this.draw()
+      this.drawAt(crosshairPos, 'X', 'red', null)
+    }
+  })
 }

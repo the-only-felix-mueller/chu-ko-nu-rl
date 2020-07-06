@@ -5,8 +5,14 @@ window.onload = function (): void {
 
   document.body.appendChild(ui.display.getContainer())
 
-  document.onkeydown = (evt) => {
-    ui.handleKeypress(evt)
+  let locked = false
+
+  document.onkeydown = async (evt) => {
+    if (!locked) {
+      locked = true
+      await ui.keydownHandler(evt)
+      locked = false
+    }
   }
 
   ui.mainLoop()

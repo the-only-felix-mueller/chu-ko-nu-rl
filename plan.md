@@ -1,9 +1,11 @@
 ## Roadmap
 
-- Place enemies randomly on floor tiles
-- Movement of the player into walls is ignored
-- Examine mode -- Press 'x', move a cursor around the map with arrow keys and print what kind of entity and tile is pointed at. This probably needs a finite state machine system.
+- Experiment on the side: Promise that is resolved when *either* a key is pressed or a timer has run out
+- Pause-Button: When the player presses "p", enemies shouldn't move, even if it's their turn.
 - Aiming and shooting (Enemies die immediately.)
+- Examine mode -- Press 'x', move a cursor around the map with arrow keys and print what kind of entity and tile is pointed at. This probably needs a finite state machine system.
+- Movement of the player into walls is ignored
+- Place enemies randomly on floor tiles
 - Enemies follow/charge the player
 - Healthpoints for enemies and player
 - Field of View

@@ -42,4 +42,11 @@ export class EntityManager {
     this.components.position.set(id, position)
     prototype(id, this.components)
   }
+
+  delete (id: EntityID): void {
+    this.idManager.free(id)
+    // TODO delete all other components
+    this.components.position.delete(id)
+    this.components.movementStrategy.delete(id)
+  }
 }
