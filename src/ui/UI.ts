@@ -42,15 +42,15 @@ export class UI {
   draw (): void {
     while (this.world.events.length > 0) {
       switch (this.world.events.shift()) {
-        case "shot":
+        case 'shot':
           console.log('"PFRRRR"')
           break
-        case "hit":
+        case 'hit':
           console.log('"AAAARG!"')
           break
-        case "miss":
+        case 'miss':
           console.log('"plink"')
-          break          
+          break
       }
     }
 
@@ -75,7 +75,7 @@ export class UI {
 
   async defaultKeydownHandler (evt: KeyboardEvent): Promise<void> {
     // Handle keydown-events, that are allowed to happen, when the game doesn't expect any other specific commands:
-    return new Promise(async resolve => {
+    return new Promise(async resolve => { // TODO "Promise executor functions should not be async."
       switch (evt.keyCode) {
         case ROT.KEYS.VK_Q:
           window.alert('Goodbye!')
@@ -94,7 +94,7 @@ export class UI {
             console.log(i.toString())
             await sleep(1000)
           }
-          console.log('continue')          
+          console.log('continue')
           break
         }
       }
@@ -132,7 +132,10 @@ export class UI {
       playerTurnIndicator.innerHTML = 'press a key'
       const playerAction = await this.waitForPlayerAction()
       playerTurnIndicator.innerHTML = 'wait...'
-      this.world.playerTurn(playerAction)
+      if (playerAction) {
+        // TODO Remove this, when the timeout of waitForPlayerAction is removed!
+        this.world.playerTurn(playerAction)
+      }
       this.draw()
       await sleep(400)
 
@@ -147,6 +150,7 @@ export class UI {
   }
 
   waitForPlayerAction = createKeydownPromise<actions.Action>(this, then => {
+    console.log('keydownHandler = playerAction')
     this.keydownHandler = async (evt: KeyboardEvent) => {
       switch (evt.keyCode) {
         case ROT.KEYS.VK_RIGHT:
@@ -173,12 +177,13 @@ export class UI {
           await this.defaultKeydownHandler(evt)
       }
     }
-  })
+  }, 8000) // TODO The timeout is just for testing reasons. Remove this later!
 
   waitForTargeting = createKeydownPromise<Vector>(this, then => {
     let crosshairPos = this.world.getPlayerPos()
     this.drawAt(crosshairPos, 'X', 'red', null)
 
+    console.log('keydownHandler = targeting')
     this.keydownHandler = async (evt: KeyboardEvent) => {
       switch (evt.keyCode) {
         // TODO 'ESC' to cancel targeting
@@ -201,6 +206,7 @@ export class UI {
           } else {
             console.log('You can\'t shoot yourself.')
           }
+          break
         default:
           await this.defaultKeydownHandler(evt)
       }

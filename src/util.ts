@@ -1,4 +1,4 @@
-import { UI } from "./ui/UI";
+import { UI } from './ui/UI' // TODO create UI interface
 
 export class IDManager {
   // TODO test this class
@@ -64,20 +64,37 @@ export function sleep (milliseconds: number): Promise<void> {
  *
  * @param ui The `keydownHandler` of this `ui` should be installed when the process of `innerFunction` has returned a result.
  * @param innerFunction This function sets up the process that will eventually pass a result to it's `then` parameter.
+ * @param timeout (optional) After this duration in milliseconds, the `resolve` of the promise will be called with `null`, even if no key was pressed.
  */
 export function createKeydownPromise<T> (
   ui: UI,
-  innerFunction: (then: ((result: T) => void)) => void
-): () => Promise<T> {
+  innerFunction: (then: ((result: T) => void)) => void,
+  timeout?: number
+): () => Promise<T|null> {
   // TODO Is this the "function decorator" pattern?  Is there an @-notation, like in Python?
   return () => {
     return new Promise<T>(resolve => {
+      let timeoutID: number
+
       innerFunction((result: T) => {
         // The result of innerFunction becomes the result of the Promise,
         // but only after resetting the keydown-handler to default.
+        console.log('keydownHandler = default')
         ui.keydownHandler = (evt) => ui.defaultKeydownHandler(evt)
+        if (timeout) {
+          // This ensures that resolve doesn't get called twice.
+          window.clearTimeout(timeoutID)
+        }
         resolve(result)
       })
+
+      if (timeout) {
+        timeoutID = window.setTimeout(() => {
+          console.log('keydownHandler = default')
+          ui.keydownHandler = (evt) => ui.defaultKeydownHandler(evt)
+          resolve(null)
+        }, timeout)
+      }
     })
   }
 }
