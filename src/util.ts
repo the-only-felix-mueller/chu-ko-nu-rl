@@ -79,8 +79,10 @@ export function createKeydownPromise<T> (
       innerFunction((result: T) => {
         // The result of innerFunction becomes the result of the Promise,
         // but only after resetting the keydown-handler to default.
+        // THIS IS COMMENTED OUT
+
         console.log('keydownHandler = default')
-        ui.keydownHandler = (evt) => ui.defaultKeydownHandler(evt)
+        ui.keydownHandler = null//(evt) => ui.defaultKeydownHandler(evt)
         if (timeout) {
           // This ensures that resolve doesn't get called twice.
           window.clearTimeout(timeoutID)

@@ -8,11 +8,7 @@ window.onload = function (): void {
   let locked = false
 
   document.onkeydown = async (evt) => {
-    if (!locked) {
-      locked = true
-      await ui.keydownHandler(evt)
-      locked = false
-    }
+    await ui.keydownHandler(evt)
   }
 
   ui.mainLoop()

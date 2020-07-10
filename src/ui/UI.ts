@@ -97,6 +97,17 @@ export class UI {
           console.log('continue')
           break
         }
+        case ROT.KEYS.VK_F1: { // help
+          this.display.drawText(2,2, "%b{blue}arrow keys:         move")
+          this.display.drawText(2,3, "%b{blue}f         :   aim / fire")
+          this.display.drawText(2,4, "%b{blue}. (period):  wait a turn")
+          this.display.drawText(2,5, "%b{blue}F1 or ESC : back to game")
+          // The second parentheses are important in the next line.
+          console.log('waiting for esc')          
+          await this.waitForKey([ROT.KEYS.VK_ESCAPE, ROT.KEYS.VK_F1])()
+          console.log('got esc')          
+          break
+        }
       }
       resolve()
     })
@@ -127,29 +138,49 @@ export class UI {
       // slow enemies every fourth word-turn.
 
       this.draw()
-      await sleep(400)
+      await this.waitForDefaultKeyOrTimeout()
 
       playerTurnIndicator.innerHTML = 'press a key'
-      const playerAction = await this.waitForPlayerAction()
+      const playerAction = await this.waitForActionKey()
       playerTurnIndicator.innerHTML = 'wait...'
       if (playerAction) {
         // TODO Remove this, when the timeout of waitForPlayerAction is removed!
         this.world.playerTurn(playerAction)
       }
       this.draw()
-      await sleep(400)
+      await this.waitForDefaultKeyOrTimeout()
 
       this.world.turn()
       turnCounter.innerHTML = this.world.turnCounter.toString()
       this.draw()
-      await sleep(400)
+      await this.waitForDefaultKeyOrTimeout()
 
       this.world.turn()
       turnCounter.innerHTML = this.world.turnCounter.toString()
     }
   }
 
-  waitForPlayerAction = createKeydownPromise<actions.Action>(this, then => {
+  waitForDefaultKeyOrTimeout = createKeydownPromise<void>(this, then => {
+    console.log('keydownHandler = default/sleep 400')
+    this.keydownHandler = async (evt: KeyboardEvent) => {
+      await this.defaultKeydownHandler(evt)
+      then() // correct?
+    }
+  }, 400)
+
+  waitForKey(keys: number[]) {
+    return createKeydownPromise<void>(this, then => {
+      console.log("keydownHandler = wait for F1/ESC")      
+      this.keydownHandler = async (evt: KeyboardEvent) => {
+        console.log(`${keys} includes ${evt.keyCode} ?`)        
+        if (keys.includes(evt.charCode)) {
+          then()
+        }
+      }
+    })
+  }
+
+  waitForActionKey = createKeydownPromise<actions.Action>(this, then => {
     console.log('keydownHandler = playerAction')
     this.keydownHandler = async (evt: KeyboardEvent) => {
       switch (evt.keyCode) {
@@ -177,7 +208,7 @@ export class UI {
           await this.defaultKeydownHandler(evt)
       }
     }
-  }, 8000) // TODO The timeout is just for testing reasons. Remove this later!
+  })//, 8000) // TODO The timeout is just for testing reasons. Remove this later!
 
   waitForTargeting = createKeydownPromise<Vector>(this, then => {
     let crosshairPos = this.world.getPlayerPos()
