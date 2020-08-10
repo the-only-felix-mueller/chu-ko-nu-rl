@@ -4,11 +4,14 @@ export type EntityPrototype = (id: EntityID, entityComponents: EntityComponents)
 
 export function player (id: EntityID, comps: EntityComponents): void {
   comps.appearance.set(id, EntityAppearance.PLAYER)
+  comps.normalSpeed.add(id)
   comps.player = id
+  comps.movementStrategy.set(id, MovementStrategy.USER)
 }
 
 export function goblin (id: EntityID, comps: EntityComponents): void {
   comps.appearance.set(id, EntityAppearance.GOBLIN)
+  comps.normalSpeed.add(id)
   comps.movementStrategy.set(id, MovementStrategy.WANDERING)
 }
 

@@ -13,7 +13,8 @@ export enum EntityAppearance {
 export enum MovementStrategy {
   WANDERING,
   HUNTING,
-  FLEEING
+  FLEEING,
+  USER
 }
 
 export type EntityID = number;
@@ -25,7 +26,10 @@ export class EntityComponents {
   movementStrategy = new Map<EntityID, MovementStrategy>();
   position = new BidirectionalVectorMap<EntityID>();
   slow = new Set<EntityID>();
+  normalSpeed = new Set<EntityID>()
   fast = new Set<EntityID>();
+  // TODO Currently entities can be fast and slow at the same time
+  // and yet not have a movementStrategy. That doesn't make sense.
 }
 
 export class EntityManager {
@@ -37,16 +41,21 @@ export class EntityManager {
     this.idManager = new IDManager()
   }
 
-  create (prototype: EntityPrototype, position: Vector): void {
+  create (prototype: EntityPrototype, position: Vector): number {
     const id = this.idManager.generate()
     this.components.position.set(id, position)
     prototype(id, this.components)
+    return id
   }
 
   delete (id: EntityID): void {
     this.idManager.free(id)
     // TODO delete all other components
-    this.components.position.delete(id)
-    this.components.movementStrategy.delete(id)
+    const cs = this.components
+    cs.position.delete(id)
+    cs.movementStrategy.delete(id)
+    cs.fast.delete(id)
+    cs.normalSpeed.delete(id)
+    cs.slow.delete(id)
   }
 }

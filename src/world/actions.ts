@@ -18,13 +18,13 @@ export function wait (): Action {
 
 export function shoot (target: Vector): Action {
   return (world) => {
-    world.events.push('shot')
+    world.effects.push('shot')
     const hitEntity = world.comps.position.atPosition(target)
     if (hitEntity) {
       world.entityManager.delete(hitEntity)
-      world.events.push('hit')
+      world.effects.push('hit')
     } else {
-      world.events.push('miss')
+      world.effects.push('miss')
     }
   }
 }

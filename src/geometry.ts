@@ -1,3 +1,5 @@
+import { KEYS } from 'rot-js'
+
 export class Vector {
   /* eslint-disable no-useless-constructor */
   constructor (
@@ -31,6 +33,13 @@ export enum Direction {
     EAST, SOUTH, WEST, NORTH
 }
 
+export const keyToDirection = new Map([
+  [KEYS.VK_RIGHT, Direction.EAST],
+  [KEYS.VK_DOWN, Direction.SOUTH],
+  [KEYS.VK_LEFT, Direction.WEST],
+  [KEYS.VK_UP, Direction.NORTH]
+])
+
 export const directions: Vector[] = [
   new Vector(1, 0),
   new Vector(0, 1),
@@ -54,7 +63,11 @@ export class Dense2DArray<type> implements Array2D<type> {
     }
 
     get (pos: Vector): type | undefined {
-      return this.columns[pos.x][pos.y]
+      try {
+        return this.columns[pos.x][pos.y]
+      } catch (error) {
+        console.error(`Was trying to access ${pos.x}|${pos.y}`)
+      }
     }
 
     set (pos: Vector, element: type): void {

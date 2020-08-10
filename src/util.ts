@@ -1,5 +1,3 @@
-import { UI } from './ui/UI' // TODO create UI interface
-
 export class IDManager {
   // TODO test this class
   max: number;
@@ -50,53 +48,23 @@ export class IDManager {
 }
 
 export function sleep (milliseconds: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
+  return new Promise(resolve => window.setTimeout(resolve, milliseconds))
 }
 
-/**
- * This function modyfies other functions to avoid a bit of code duplication.
- *
- * The `innerFunction` sets up an event handler and eventually passes
- * a result to the 'then' function, it was passed as an argument.
- *
- * The resulting *modified* function creates a `Promise` that sets up
- * the event listener by calling `innerFunction`.
- *
- * @param ui The `keydownHandler` of this `ui` should be installed when the process of `innerFunction` has returned a result.
- * @param innerFunction This function sets up the process that will eventually pass a result to it's `then` parameter.
- * @param timeout (optional) After this duration in milliseconds, the `resolve` of the promise will be called with `null`, even if no key was pressed.
- */
-export function createKeydownPromise<T> (
-  ui: UI,
-  innerFunction: (then: ((result: T) => void)) => void,
-  timeout?: number
-): () => Promise<T|null> {
-  // TODO Is this the "function decorator" pattern?  Is there an @-notation, like in Python?
-  return () => {
-    return new Promise<T>(resolve => {
-      let timeoutID: number
-
-      innerFunction((result: T) => {
-        // The result of innerFunction becomes the result of the Promise,
-        // but only after resetting the keydown-handler to default.
-        // THIS IS COMMENTED OUT
-
-        console.log('keydownHandler = default')
-        ui.keydownHandler = null//(evt) => ui.defaultKeydownHandler(evt)
-        if (timeout) {
-          // This ensures that resolve doesn't get called twice.
-          window.clearTimeout(timeoutID)
-        }
-        resolve(result)
-      })
-
-      if (timeout) {
-        timeoutID = window.setTimeout(() => {
-          console.log('keydownHandler = default')
-          ui.keydownHandler = (evt) => ui.defaultKeydownHandler(evt)
-          resolve(null)
-        }, timeout)
-      }
-    })
+export function * combineIterators<T> (a: IterableIterator<T>, b: IterableIterator<T>): IterableIterator<T> {
+  for (const element of a) {
+    yield element
   }
+  for (const element of b) {
+    yield element
+  }
+}
+
+export function promiseKeydown (): Promise<number> {
+  return new Promise<number>(resolve => {
+    window.onkeydown = (evt: KeyboardEvent) => {
+      window.onkeydown = null
+      resolve(evt.keyCode)
+    }
+  })
 }
