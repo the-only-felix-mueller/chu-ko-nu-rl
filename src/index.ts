@@ -1,13 +1,7 @@
 import { UI } from './ui/UI'
 
-window.onload = function (): void {
+window.onload = async function (): Promise<void> {
   const ui = new UI()
-
   document.body.appendChild(ui.display.getContainer())
-
-  document.onkeydown = (evt) => {
-    ui.handleKeypress(evt)
-  }
-
   ui.mainLoop()
 }

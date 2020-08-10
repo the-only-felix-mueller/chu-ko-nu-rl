@@ -1,4 +1,4 @@
-import { Direction, directions } from '../geometry'
+import { Direction, directions, Vector } from '../geometry'
 import { World } from './World'
 
 export type Action = (world: World) => void;
@@ -16,7 +16,15 @@ export function wait (): Action {
   return (world) => world
 }
 
-/*
- function shoot
-    world.animationEvents.push(AnimationEvents.Shoot(source, dest))
-*/
+export function shoot (target: Vector): Action {
+  return (world) => {
+    world.effects.push('shot')
+    const hitEntity = world.comps.position.atPosition(target)
+    if (hitEntity) {
+      world.entityManager.delete(hitEntity)
+      world.effects.push('hit')
+    } else {
+      world.effects.push('miss')
+    }
+  }
+}

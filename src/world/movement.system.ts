@@ -1,7 +1,8 @@
 import { World } from './World'
 import * as ROT from 'rot-js'
-import { EntityID } from './entities'
+import { EntityID, MovementStrategy } from './entities'
 import { Vector, directions } from '../geometry'
+import { getActiveEntities } from './speed.system'
 
 export function movement (world: World): void {
   // TODO This function is very complicated and should be testet thoroughly.
@@ -11,16 +12,6 @@ export function movement (world: World): void {
     // If this function returns null, the entity doesn't want to move.
     // The desired position is never an entity *without* movementStrategy-component
     // or a solid tile, like a wall.
-
-    if (world.turnCounter % 4 !== 3 && world.comps.slow.has(id)) {
-      // In every turn but each fourth, slow entities don't move.
-      // They only move every fourth turn.
-      return null
-    }
-    if (world.turnCounter % 2 === 0 && !world.comps.fast.has(id)) {
-      // In every second turn, entities that _aren't_ fast don't move.
-      return null
-    }
 
     const strategy = world.comps.movementStrategy.get(id)
     const oldPosition = world.comps.position.get(id)
@@ -32,7 +23,10 @@ export function movement (world: World): void {
       // case MovementStrategy.HUNTING:
       //     // TODO implement - Currently hunting is just wandering.
       // case MovementStrategy.WANDERING:
-      default: {
+      // TODO MovementStrategy.USER isn't handled here. Should it?
+      case MovementStrategy.USER:
+        break
+      case MovementStrategy.WANDERING: {
         let dirIndex = ROT.RNG.getUniformInt(0, 3)
 
         for (let i = 0; i < 4; ++i) {
@@ -50,7 +44,10 @@ export function movement (world: World): void {
             break
           }
         }
+        break
       }
+      default:
+        throw new Error('Unimplemented movement strategy.')
     }
     return newPosition
   }
@@ -60,11 +57,15 @@ export function movement (world: World): void {
   // List with all entities that want to move this turn:
   const wantsToMoveOrdered: EntityID[] = []
 
-  for (const id of world.comps.movementStrategy.keys()) {
-    const dest = determineGoalDestination(id)
-    if (dest) {
-      goals[id] = dest
-      wantsToMoveOrdered.push(id)
+  // for (const id of world.comps.movementStrategy.keys()) {
+  for (const id of getActiveEntities(world)) {
+    if (world.comps.player !== id) {
+      // console.log('moves: ' + EntityAppearance[world.comps.appearance.get(id)])
+      const dest = determineGoalDestination(id)
+      if (dest) {
+        goals[id] = dest
+        wantsToMoveOrdered.push(id)
+      }
     }
   }
 

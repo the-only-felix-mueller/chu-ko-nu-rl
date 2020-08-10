@@ -48,5 +48,23 @@ export class IDManager {
 }
 
 export function sleep (milliseconds: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
+  return new Promise(resolve => window.setTimeout(resolve, milliseconds))
+}
+
+export function * combineIterators<T> (a: IterableIterator<T>, b: IterableIterator<T>): IterableIterator<T> {
+  for (const element of a) {
+    yield element
+  }
+  for (const element of b) {
+    yield element
+  }
+}
+
+export function promiseKeydown (): Promise<number> {
+  return new Promise<number>(resolve => {
+    window.onkeydown = (evt: KeyboardEvent) => {
+      window.onkeydown = null
+      resolve(evt.keyCode)
+    }
+  })
 }
