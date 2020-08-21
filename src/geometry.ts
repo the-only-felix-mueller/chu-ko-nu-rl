@@ -127,6 +127,12 @@ export class BidirectionalVectorMap<T> extends Map<T, Vector> {
     return super.delete(content)
   }
 
+  /**
+   * This removes the given element from the position it was on and puts it in a new position.
+   *
+   * @param content The element whos (whichs?) position should be changed.
+   * @param position The new position
+   */
   move (content: T, position: Vector): void {
     this.delete(content)
     this.set(content, position)

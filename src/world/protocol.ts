@@ -32,7 +32,15 @@ export class ExpectingTurn extends ProtocolPhase {
     if (w.isPlayerTurn) {
       // Player turn
       if (cs.normalSpeed.has(cs.player) && w.turnCounter % 2 === 0) {
-        w.nextPlayerAction(w)
+        const success = w.nextPlayerAction(w)
+        if (success) {
+          w.isPlayerTurn = false
+        } else {
+          console.log('This action didn\'t work. Try something else.')
+          this.world.phase = this.world.expectingInput
+        }
+      } else {
+        w.isPlayerTurn = false
       }
     } else {
       // Enemy turn
@@ -42,10 +50,10 @@ export class ExpectingTurn extends ProtocolPhase {
         // The user has to choose the nextPlayerAction.
         this.world.phase = this.world.expectingInput
       } else {
-        // The nextPlayerAction gets set by a statur effect, such as "confused".
+        // The nextPlayerAction gets set by a status effect, such as "confused".
         this.world.phase = this.world.expectingTurn
       }
+      w.isPlayerTurn = true
     }
-    w.isPlayerTurn = !w.isPlayerTurn
   }
 }

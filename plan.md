@@ -1,6 +1,5 @@
 ## Roadmap
 
-- Movement of the player into walls is ignored
 - Examine mode -- Press 'x', move a cursor around the map with arrow keys and print what kind of entity and tile is pointed at. This probably needs a finite state machine system.
 - Place enemies randomly on floor tiles
 - Enemies follow/charge the player
