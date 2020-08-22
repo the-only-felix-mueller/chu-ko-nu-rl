@@ -35,16 +35,33 @@ export class World {
       this.map.set(new Vector(x, y), content === 1 ? TileType.WALL : TileType.FLOOR)
     })
 
-    this.entityManager.create(prototypes.player, new Vector(33, 33))
-    this.entityManager.create(prototypes.bat, new Vector(28, 34))
-    this.entityManager.create(prototypes.barrel, new Vector(30, 34))
-    this.entityManager.create(prototypes.turtle, new Vector(32, 34))
-    this.entityManager.create(prototypes.turtle, new Vector(34, 33));
-    [[35, 35], [35, 31], [31, 31]].forEach((pos: [number, number]) => {
-      this.entityManager.create(prototypes.goblin, new Vector(...pos))
-    })
+    this.placeEntities()
 
     this.phase = this.expectingInput
+  }
+
+  private placeEntities () {
+    const list: [prototypes.EntityPrototype, number][] = [
+      [prototypes.player, 1],
+      [prototypes.bat, 2],
+      [prototypes.barrel, 3],
+      [prototypes.turtle, 3],
+      [prototypes.goblin, 5]
+    ]
+    for (const [type, num] of list) {
+      for (let i = 0; i < num; i++) {
+        let posCandidate // Apparently this can't be declared as a `const` inside the loop.
+        while (true) {
+          const x = ROT.RNG.getUniformInt(1, this.dimensions.x - 1)
+          const y = ROT.RNG.getUniformInt(1, this.dimensions.y - 1)
+          posCandidate = new Vector(x, y)
+          if (!this.map.get(posCandidate).solid && !this.comps.position.atPosition(posCandidate)) {
+            break
+          }
+        }
+        this.entityManager.create(type, posCandidate)
+      }
+    }
   }
 
   getPlayerPos (): Vector {
