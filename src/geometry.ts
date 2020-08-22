@@ -138,6 +138,11 @@ export class BidirectionalVectorMap<T> extends Map<T, Vector> {
     this.set(content, position)
   }
 
+  /**
+   * Get the entity at the given position.
+   *
+   * If no entity is there, the result will be "undefined".
+   */
   atPosition (position: Vector): T {
     return this.reverseMap.get(position)
   }

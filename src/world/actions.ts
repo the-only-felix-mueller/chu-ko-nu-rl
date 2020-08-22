@@ -3,8 +3,8 @@ import { World } from './World'
 
 /**
  * An `Action` is a function that transforms the world given as an argument.
- * 
- * The return value indicates, whether the action was valid or not.  
+ *
+ * The return value indicates, whether the action was valid or not.
  * For example, if the player tries to walk through a wall, the world object
  * will not be changed and the `Action` will return `false`.
  */
