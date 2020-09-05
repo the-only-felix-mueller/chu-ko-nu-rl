@@ -11,8 +11,10 @@ export const entities = new Map<EntityAppearance, [string, string]>([
   [EntityAppearance.BAT, ['b', 'grey']],
   [EntityAppearance.GOBLIN, ['g', 'green']],
   [EntityAppearance.TURTLE, ['t', 'DarkGreen']],
-  [EntityAppearance.PLAYER, ['@', 'yellow']]
+  [EntityAppearance.PLAYER, ['@', 'yellow']],
+  [EntityAppearance.WISP, ['|', '#FFFFEE']]
 ])
 
 // TODO Textual descriptions could be added similarly: GOBLIN -> "a smelly Greenskin"
 // How would this work with animated entities? Maybe the constants need to become functions.
+// Do all wisps look the same at each moment? (Yes)

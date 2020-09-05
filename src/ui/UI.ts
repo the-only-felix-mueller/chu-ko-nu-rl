@@ -13,12 +13,18 @@ export class UI {
   readonly world: World
   private readonly dimensions: Vector
   private readonly center: Vector
+  private wispAnimationPhase: number // TODO generalize, put this in apperances.ts
+  private isMenuDisplayed: boolean
+  private crosshairPos: Vector | null
 
   constructor () {
+    this.wispAnimationPhase = 0
     this.dimensions = new Vector(40, 26)
     this.center = new Vector(this.dimensions.x / 2, this.dimensions.y / 2)
     this.display = new ROT.Display({ width: this.dimensions.x, height: this.dimensions.y })
     this.world = new World()
+    this.isMenuDisplayed = false
+    this.crosshairPos = null
   }
 
   async mainLoop () {
@@ -31,10 +37,16 @@ export class UI {
     while (true) {
       if (this.world.phase instanceof ExpectingInput) { // "Type Guard"
         playerTurnIndicator.innerText = 'choose an action'
+
         // During the wait, the display can be redrawn at regular intervals.
+        this.animateAndDraw() // Draw once immediately.
+        const intervalHandle = window.setInterval(() => {
+          this.animateAndDraw()
+        }, 200)
+
         const action = await this.waitForActionKey()
+        window.clearInterval(intervalHandle)
         playerTurnIndicator.innerText = 'wait...'
-        // TODO Check if action is valid before submitting it.
         this.world.phase.setAction(action)
       } else if (this.world.phase instanceof ExpectingTurn) {
         this.world.phase.turn()
@@ -87,12 +99,19 @@ export class UI {
   }
 
   /**
-   * This changes the colors or characters parts of the world are drawn with ("animate")
+   * This changes the colors or glyphs of parts of tiles and entities ("animate")
    * and then draws everything, which includes the map tiles, entities and "effects".
    * Effects are temporary animations like projectiles, blood splatters or explosions.
    */
   animateAndDraw (): void {
-    // TODO any animation
+    if (this.isMenuDisplayed) {
+      return // Don't draw over a menu window.
+    }
+
+    const wispGlyphs = ['|', '/', '–', '\\']
+    const wispColors = ['#E4FF70', '#E0F470', '#FF9070']
+    appearances.entities.set(EntityAppearance.WISP, [wispGlyphs[this.wispAnimationPhase % 4], wispColors[this.wispAnimationPhase % 3]])
+    this.wispAnimationPhase = (++this.wispAnimationPhase) % 12
 
     if (!this.world.visibleEntityActions()) {
       // If there are no enemies in sight of the player nothing needs to get redrawn.
@@ -133,6 +152,10 @@ export class UI {
         }
       }
     }
+
+    if (this.crosshairPos !== null) {
+      this.drawAt(this.crosshairPos, 'X', 'red', null)
+    }
   }
 
   /**
@@ -142,10 +165,9 @@ export class UI {
    */
   async waitForMenuKeyOrTimeout (): Promise<void> {
     const menuKeys = [ROT.KEYS.VK_F1, ROT.KEYS.VK_P, ROT.KEYS.VK_Q]
-
     const key = await Promise.race([this.waitForKey(menuKeys), sleep(200)])
     // TODO there are three cases: menu key, non-menu key, no key within sleep time
-    if (typeof key === 'number') {
+    if (typeof key === 'number') { // If no key was pressed, "key" contains "undefined".
       await this.handleMenuKey(key)
     }
   }
@@ -181,13 +203,17 @@ export class UI {
         break
       }
       case ROT.KEYS.VK_F1: { // help
-        // this.dialogWindowOpen = true
+        this.isMenuDisplayed = true
         this.display.drawText(2, 2, '%b{blue}arrow keys:         move')
         this.display.drawText(2, 3, '%b{blue}f         :   aim / fire')
         this.display.drawText(2, 4, '%b{blue}. (period):  wait a turn')
         this.display.drawText(2, 5, '%b{blue}F1 or ESC : back to game')
         await this.waitForKey([ROT.KEYS.VK_ESCAPE, ROT.KEYS.VK_F1])
-        this.animateAndDraw()
+        this.isMenuDisplayed = false
+        // this.animateAndDraw()
+        // TODO There might be an issue when a menu is opened during an
+        // enemy turn. I have to check whether the menu is drawn over
+        // immediately or just when it's the players turn again.
         break
       }
     }
@@ -247,31 +273,31 @@ export class UI {
    * to the chosen coordinates.
    */
   async waitForTargeting (): Promise<Vector> {
-    // Closure
-    let crosshairPos = this.world.getPlayerPos()
-    this.drawAt(crosshairPos, 'X', 'red', null)
+    this.crosshairPos = this.world.getPlayerPos()
+    this.drawAt(this.crosshairPos, 'X', 'red', null)
 
     while (true) {
       // Loop is left with `return` statement, when key 'F' is pressed.
       const key = await promiseKeydown()
       const direction = keyToDirection.get(key)
       if (direction !== undefined) {
-        crosshairPos = crosshairPos.add(directions[direction])
-        this.animateAndDraw()
-        this.drawAt(crosshairPos, 'X', 'red', null)
+        this.crosshairPos = this.crosshairPos.add(directions[direction])
       } else {
         switch (key) {
           case ROT.KEYS.VK_F: // 'Fire'
-            if (crosshairPos !== this.world.getPlayerPos()) {
-              return crosshairPos
+            if (this.crosshairPos !== this.world.getPlayerPos()) {
+              const result = this.crosshairPos
+              this.crosshairPos = null // Don't draw the crosshair anywhere anymore.
+              return result
             } else {
               console.log('You can\'t shoot yourself.')
             }
             break
           case ROT.KEYS.VK_ESCAPE:
+            this.crosshairPos = null
             throw Error('targeting aborted') // Not really an error.
           default:
-            this.handleMenuKey(key)
+            await this.handleMenuKey(key)
         }
       }
     }

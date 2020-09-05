@@ -7,7 +7,8 @@ export enum EntityAppearance {
   BAT,
   GOBLIN,
   PLAYER,
-  TURTLE
+  TURTLE,
+  WISP
 }
 
 export enum MovementStrategy {

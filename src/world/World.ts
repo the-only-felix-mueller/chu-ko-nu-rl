@@ -46,7 +46,8 @@ export class World {
       [prototypes.bat, 2],
       [prototypes.barrel, 3],
       [prototypes.turtle, 3],
-      [prototypes.goblin, 5]
+      [prototypes.goblin, 5],
+      [prototypes.wisp, 5]
     ]
     for (const [type, num] of list) {
       for (let i = 0; i < num; i++) {

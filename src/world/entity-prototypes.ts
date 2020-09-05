@@ -30,3 +30,9 @@ export function turtle (id: EntityID, comps: EntityComponents): void {
 export function barrel (id: EntityID, comps: EntityComponents): void {
   comps.appearance.set(id, EntityAppearance.BARREL)
 }
+
+export function wisp (id: EntityID, comps: EntityComponents): void {
+  comps.appearance.set(id, EntityAppearance.WISP)
+  comps.movementStrategy.set(id, MovementStrategy.WANDERING)
+  comps.normalSpeed.add(id)
+}
