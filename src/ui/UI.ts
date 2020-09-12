@@ -2,7 +2,7 @@ import * as ROT from 'rot-js'
 
 import * as appearances from './appearances'
 
-import { Vector, directions, keyToDirection } from '../geometry'
+import { Vector, directions, keyToDirection, Direction } from '../geometry'
 import { sleep, promiseKeydown } from '../util'
 
 import { World } from '../world/World'
@@ -16,6 +16,7 @@ interface Drawable {
 }
 
 export class UI {
+  // TODO This class is too big. Maybe break it down in ui-elements.
   readonly display: ROT.Display
   readonly world: World
   private readonly dimensions: Vector
@@ -64,6 +65,15 @@ export class UI {
     }
   }
 
+  private log (text: string) {
+    const oldOldLog = document.getElementById('log1')
+    const oldLog = document.getElementById('log2')
+    const newLog = document.getElementById('log3')
+    oldOldLog.innerText = oldLog.innerText
+    oldLog.innerText = newLog.innerText
+    newLog.innerText = text
+  }
+
   /**
    * Convert an absolute position on the map to a relative position on the
    * section currently displayed.
@@ -109,9 +119,10 @@ export class UI {
    * Effects are temporary animations like projectiles, blood splatters or explosions.
    */
   animateAndDraw (): void {
+    const wispDescrition = 'a magical wisp'
     const wispGlyphs = ['|', '/', '–', '\\']
     const wispColors = ['#E4FF70', '#E0F470', '#FF9070']
-    appearances.entities.set(EntityAppearance.WISP, [wispGlyphs[this.wispAnimationPhase % 4], wispColors[this.wispAnimationPhase % 3]])
+    appearances.entities.set(EntityAppearance.WISP, [wispDescrition, wispGlyphs[this.wispAnimationPhase % 4], wispColors[this.wispAnimationPhase % 3]])
     this.wispAnimationPhase = (++this.wispAnimationPhase) % 12
 
     if (!this.world.visibleEntityActions()) {
@@ -126,13 +137,13 @@ export class UI {
     while (this.world.effects.length > 0) {
       switch (this.world.effects.shift()) {
         case 'shot':
-          console.log('"PFRRRR"')
+          this.log('"PFRRRR"')
           break
         case 'hit':
-          console.log('"AAAARG!"')
+          this.log('"AAAARG!"') // Currently, even the barrel screams when shot.
           break
         case 'miss':
-          console.log('"plink"')
+          this.log('"plink"')
           break
       }
     }
@@ -141,11 +152,11 @@ export class UI {
       for (let x = 0; x < this.dimensions.x; x++) {
         const absolutePos = this.relToAbs(new Vector(x, y))
         if (absolutePos.isWithinRect(this.world.dimensions)) {
-          let [glyph, fg, bg] = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
+          let [_, glyph, fg, bg] = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
 
           const entityID = this.world.comps.position.atPosition(absolutePos)
           if (entityID) {
-            [glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
+            [_, glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
           }
           this.display.draw(x, y, glyph, fg, bg)
         } else {
@@ -207,10 +218,13 @@ export class UI {
         const outerThis = this
         this.drawables.push({
           draw () {
-            outerThis.display.drawText(2, 2, '%b{blue}arrow keys:         move')
-            outerThis.display.drawText(2, 3, '%b{blue}f         :   aim / fire')
-            outerThis.display.drawText(2, 4, '%b{blue}. (period):  wait a turn')
-            outerThis.display.drawText(2, 5, '%b{blue}F1 or ESC : back to game')
+            outerThis.display.drawText(3, 2, '%b{blue}+--------------------------+')
+            outerThis.display.drawText(3, 3, '%b{blue}| arrow keys:         move |')
+            outerThis.display.drawText(3, 4, '%b{blue}| f         :   aim / fire |')
+            outerThis.display.drawText(3, 5, '%b{blue}| . (period):  wait a turn |')
+            outerThis.display.drawText(3, 6, '%b{blue}| x         :      examine |')
+            outerThis.display.drawText(3, 7, '%b{blue}| F1 or ESC : back to game |')
+            outerThis.display.drawText(3, 8, '%b{blue}+--------------------------+')
           }
         })
         this.animateAndDraw() // Optionally there could be a setInterval here,
@@ -223,6 +237,51 @@ export class UI {
         // enemy turn. I have to check whether the menu is drawn over
         // *immediately* or just *when it's the players turn again*.
         break
+      }
+      case ROT.KEYS.VK_X: { // eXamine
+        const outerThis = this
+        const drawableMarker = {
+          position: outerThis.world.getPlayerPos(),
+          draw () {
+            const neighborBackgrounds = directions.map((dir) =>
+              appearances.tiles.get(outerThis.world.map.get(this.position.add(dir)).appearance)[3])
+            const arrows = ['<', '^', '>', 'v'] // E, S, W, N
+            const dirs = [Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.NORTH]
+            dirs.forEach((dir: number) => {
+              outerThis.drawAt(this.position.add(directions[dir]), arrows[dir], 'yellow', neighborBackgrounds[dir])
+            })
+          }
+        }
+        this.drawables.push(drawableMarker)
+        this.log('This is who you are.')
+
+        // TODO This is similar to crosshair/fire code. Check for refactoring opportunities.
+        while (true) {
+          // Loop is left with `return` statement, when 'ESC' is pressed.
+          const key = await promiseKeydown()
+          const direction = keyToDirection.get(key)
+          if (direction !== undefined) {
+            drawableMarker.position = drawableMarker.position.add(directions[direction])
+            const tileType = this.world.map.get(drawableMarker.position)
+            const tileDescription: string = appearances.tiles.get(tileType.appearance)[0]
+            const c = this.world.comps
+            const entityID = c.position.atPosition(drawableMarker.position)
+            if (entityID) {
+              const description = appearances.entities.get(this.world.comps.appearance.get(entityID))[0]
+              this.log(`You see ${description} on ${tileDescription}.`)
+            } else {
+              this.log(`You see ${tileDescription}.`)
+            }
+          } else {
+            switch (key) {
+              case ROT.KEYS.VK_ESCAPE:
+                this.drawables.pop()
+                return // Statements after the switch-statement will not be executed.
+              default:
+                await this.handleMenuKey(key)
+            }
+          }
+        }
       }
     }
     window.onkeydown = backup
@@ -304,7 +363,7 @@ export class UI {
               this.drawables.pop()
               return drawableCrosshair.position
             } else {
-              console.log('You can\'t shoot yourself.')
+              this.log('You can\'t shoot yourself.')
             }
             break
           case ROT.KEYS.VK_ESCAPE:
