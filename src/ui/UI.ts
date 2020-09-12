@@ -1,12 +1,19 @@
-import { World } from '../world/World'
-import { Vector, directions, keyToDirection } from '../geometry'
-import * as actions from '../world/actions'
-import * as appearances from './appearances'
 import * as ROT from 'rot-js'
+
+import * as appearances from './appearances'
+
+import { Vector, directions, keyToDirection } from '../geometry'
 import { sleep, promiseKeydown } from '../util'
+
+import { World } from '../world/World'
+import * as actions from '../world/actions'
 import { TileAppearance } from '../world/tiles'
 import { EntityAppearance } from '../world/entities'
 import { ExpectingInput, ExpectingTurn } from '../world/protocol'
+
+interface Drawable {
+  draw (): void
+}
 
 export class UI {
   readonly display: ROT.Display
@@ -14,8 +21,7 @@ export class UI {
   private readonly dimensions: Vector
   private readonly center: Vector
   private wispAnimationPhase: number // TODO generalize, put this in apperances.ts
-  private isMenuDisplayed: boolean
-  private crosshairPos: Vector | null
+  private drawables: Drawable[]
 
   constructor () {
     this.wispAnimationPhase = 0
@@ -23,8 +29,7 @@ export class UI {
     this.center = new Vector(this.dimensions.x / 2, this.dimensions.y / 2)
     this.display = new ROT.Display({ width: this.dimensions.x, height: this.dimensions.y })
     this.world = new World()
-    this.isMenuDisplayed = false
-    this.crosshairPos = null
+    this.drawables = []
   }
 
   async mainLoop () {
@@ -104,10 +109,6 @@ export class UI {
    * Effects are temporary animations like projectiles, blood splatters or explosions.
    */
   animateAndDraw (): void {
-    if (this.isMenuDisplayed) {
-      return // Don't draw over a menu window.
-    }
-
     const wispGlyphs = ['|', '/', '–', '\\']
     const wispColors = ['#E4FF70', '#E0F470', '#FF9070']
     appearances.entities.set(EntityAppearance.WISP, [wispGlyphs[this.wispAnimationPhase % 4], wispColors[this.wispAnimationPhase % 3]])
@@ -153,9 +154,9 @@ export class UI {
       }
     }
 
-    if (this.crosshairPos !== null) {
-      this.drawAt(this.crosshairPos, 'X', 'red', null)
-    }
+    this.drawables.forEach(drawable => {
+      drawable.draw()
+    })
   }
 
   /**
@@ -203,17 +204,24 @@ export class UI {
         break
       }
       case ROT.KEYS.VK_F1: { // help
-        this.isMenuDisplayed = true
-        this.display.drawText(2, 2, '%b{blue}arrow keys:         move')
-        this.display.drawText(2, 3, '%b{blue}f         :   aim / fire')
-        this.display.drawText(2, 4, '%b{blue}. (period):  wait a turn')
-        this.display.drawText(2, 5, '%b{blue}F1 or ESC : back to game')
+        const outerThis = this
+        this.drawables.push({
+          draw () {
+            outerThis.display.drawText(2, 2, '%b{blue}arrow keys:         move')
+            outerThis.display.drawText(2, 3, '%b{blue}f         :   aim / fire')
+            outerThis.display.drawText(2, 4, '%b{blue}. (period):  wait a turn')
+            outerThis.display.drawText(2, 5, '%b{blue}F1 or ESC : back to game')
+          }
+        })
+        this.animateAndDraw() // Optionally there could be a setInterval here,
+        // but this help-menu is provisorial anyway.
+        // Currently there will be animations in the background when the menu is
+        // called during a player-turn, but not during an enemy-turn.
         await this.waitForKey([ROT.KEYS.VK_ESCAPE, ROT.KEYS.VK_F1])
-        this.isMenuDisplayed = false
-        // this.animateAndDraw()
+        this.drawables.pop()
         // TODO There might be an issue when a menu is opened during an
         // enemy turn. I have to check whether the menu is drawn over
-        // immediately or just when it's the players turn again.
+        // *immediately* or just *when it's the players turn again*.
         break
       }
     }
@@ -273,29 +281,35 @@ export class UI {
    * to the chosen coordinates.
    */
   async waitForTargeting (): Promise<Vector> {
-    this.crosshairPos = this.world.getPlayerPos()
-    this.drawAt(this.crosshairPos, 'X', 'red', null)
+    const outerThis = this // Is there a more elegant way to do this?
+
+    const drawableCrosshair = {
+      position: this.world.getPlayerPos(),
+      draw () {
+        outerThis.drawAt(this.position, 'X', 'red', null)
+      }
+    }
+    this.drawables.push(drawableCrosshair)
 
     while (true) {
       // Loop is left with `return` statement, when key 'F' is pressed.
       const key = await promiseKeydown()
       const direction = keyToDirection.get(key)
       if (direction !== undefined) {
-        this.crosshairPos = this.crosshairPos.add(directions[direction])
+        drawableCrosshair.position = drawableCrosshair.position.add(directions[direction])
       } else {
         switch (key) {
           case ROT.KEYS.VK_F: // 'Fire'
-            if (this.crosshairPos !== this.world.getPlayerPos()) {
-              const result = this.crosshairPos
-              this.crosshairPos = null // Don't draw the crosshair anywhere anymore.
-              return result
+            if (drawableCrosshair.position !== this.world.getPlayerPos()) {
+              this.drawables.pop()
+              return drawableCrosshair.position
             } else {
               console.log('You can\'t shoot yourself.')
             }
             break
           case ROT.KEYS.VK_ESCAPE:
-            this.crosshairPos = null
-            throw Error('targeting aborted') // Not really an error.
+            this.drawables.pop() // I assume the crosshair will be the last drawable added. TODO check this!
+            throw Error('targeting aborted') // Not really an "error".
           default:
             await this.handleMenuKey(key)
         }
