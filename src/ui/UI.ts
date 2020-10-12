@@ -3,13 +3,14 @@ import * as ROT from 'rot-js'
 import * as appearances from './appearances'
 
 import { Vector, directions, keyToDirection, Direction } from '../geometry'
-import { sleep, promiseKeydown } from '../util'
+import { sleep, promiseKeydown, darken } from '../util'
 
 import { World } from '../world/World'
 import * as actions from '../world/actions'
 import { TileAppearance } from '../world/tiles'
 import { EntityAppearance } from '../world/entities'
 import { ExpectingInput, ExpectingTurn } from '../world/protocol'
+import { PlayerCharacter } from '../world/PlayerCharacter'
 
 interface Drawable {
   draw (): void
@@ -22,14 +23,20 @@ export class UI {
   private readonly dimensions: Vector
   private readonly center: Vector
   private wispAnimationPhase: number // TODO generalize, put this in apperances.ts
+  private playerCharacter: PlayerCharacter
   private drawables: Drawable[]
 
   constructor () {
     this.wispAnimationPhase = 0
     this.dimensions = new Vector(40, 26)
     this.center = new Vector(this.dimensions.x / 2, this.dimensions.y / 2)
-    this.display = new ROT.Display({ width: this.dimensions.x, height: this.dimensions.y })
+    this.display = new ROT.Display({
+      width: this.dimensions.x,
+      height: this.dimensions.y,
+      forceSquareRatio: true
+    })
     this.world = new World()
+    this.playerCharacter = new PlayerCharacter(this.world)
     this.drawables = []
   }
 
@@ -38,6 +45,7 @@ export class UI {
     const turnCounter = document.getElementById('turn-counter')
 
     // The world has to be drawn before the player decides what action to perform.
+    this.playerCharacter.updateFOV()
     this.animateAndDraw()
 
     while (true) {
@@ -56,6 +64,7 @@ export class UI {
         this.world.phase.setAction(action)
       } else if (this.world.phase instanceof ExpectingTurn) {
         this.world.phase.turn()
+        this.playerCharacter.updateFOV()
         turnCounter.innerText = this.world.turnCounter.toString()
         await this.displayTurn()
       } else {
@@ -151,16 +160,22 @@ export class UI {
     for (let y = 0; y < this.dimensions.y; y++) {
       for (let x = 0; x < this.dimensions.x; x++) {
         const absolutePos = this.relToAbs(new Vector(x, y))
-        if (absolutePos.isWithinRect(this.world.dimensions)) {
-          let [_, glyph, fg, bg] = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
+        if (absolutePos.isWithinRect(this.world.dimensions) && this.playerCharacter.getExplored(absolutePos)) {
+          let [, glyph, fg, bg] = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
 
           const entityID = this.world.comps.position.atPosition(absolutePos)
           if (entityID) {
-            [_, glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
+            [, glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
           }
+          if (!this.playerCharacter.getVisible(absolutePos)) {
+            // TODO The dark colors should be calulated once only.
+            fg = darken(fg)
+            bg = darken(bg)
+          }
+
           this.display.draw(x, y, glyph, fg, bg)
         } else {
-          this.display.draw(x, y, 'X', '#222', '#111')
+          this.display.draw(x, y, ' ', '#222', '#111')
         }
       }
     }
@@ -266,6 +281,8 @@ export class UI {
             const tileDescription: string = appearances.tiles.get(tileType.appearance)[0]
             const c = this.world.comps
             const entityID = c.position.atPosition(drawableMarker.position)
+            console.log(`explored: ${this.playerCharacter.getExplored(drawableMarker.position)}`)
+            console.log(`visible:  ${this.playerCharacter.getVisible(drawableMarker.position)}`)
             if (entityID) {
               const description = appearances.entities.get(this.world.comps.appearance.get(entityID))[0]
               this.log(`You see ${description} on ${tileDescription}.`)

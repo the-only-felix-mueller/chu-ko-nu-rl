@@ -1,3 +1,5 @@
+import * as ROT from 'rot-js'
+
 export class IDManager {
   // TODO test this class
   max: number;
@@ -67,4 +69,15 @@ export function promiseKeydown (): Promise<number> {
       resolve(evt.keyCode)
     }
   })
+}
+
+export function darken (color: string): string {
+  type Color = [number, number, number] // There *should* be a type inside ROT like this somewhere.
+
+  const oldColor1 = ROT.Color.fromString(color)
+  // Hack: This convinces typescript that `oldColor` indeed always has three elements.
+  const oldColor2: Color = [oldColor1[0], oldColor1[1], oldColor1[2]]
+  const newColor = ROT.Color.interpolate(oldColor2, [5, 5, 30], 0.7)
+
+  return ROT.Color.toHex(newColor)
 }

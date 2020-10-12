@@ -55,10 +55,13 @@ interface Array2D<type> {
 export class Dense2DArray<type> implements Array2D<type> {
     columns: type[][];
 
-    constructor (dimensions: Vector) {
-      this.columns = new Array(dimensions.x)
+    constructor (dimensions: Vector, initialValue?: type) {
+      this.columns = new Array<Array<type>>(dimensions.x)
       for (let y = 0; y < dimensions.y; y++) {
-        this.columns[y] = new Array(dimensions.y)
+        this.columns[y] = new Array<type>(dimensions.y)
+        if (initialValue !== undefined) {
+          this.columns[y].fill(initialValue)
+        }
       }
     }
 
@@ -71,7 +74,11 @@ export class Dense2DArray<type> implements Array2D<type> {
     }
 
     set (pos: Vector, element: type): void {
-      this.columns[pos.x][pos.y] = element
+      try {
+        this.columns[pos.x][pos.y] = element
+      } catch (error) {
+        console.error(`Was trying to access ${pos.x}|${pos.y}`)
+      }
     }
 }
 
