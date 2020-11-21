@@ -17,7 +17,7 @@ export class PlayerCharacter {
   private explored: Dense2DArray<boolean> // TODO good name?!
   private visible: Dense2DArray<boolean>
 
-  constructor(world: World) {
+  constructor (world: World) {
     this.world = world
     console.log(`world dim is set as ${this.world.dimensions}`)
 
@@ -30,7 +30,7 @@ export class PlayerCharacter {
     })
   }
 
-  updateFOV(): void {
+  updateFOV (): void {
     const pos = this.world.getPlayerPos()
     // Reset visible tiles to all false/hidden:
     this.visible = new Dense2DArray(this.visiDim, false)
@@ -52,11 +52,11 @@ export class PlayerCharacter {
     })
   }
 
-  getExplored(pos: Vector): boolean {
+  getExplored (pos: Vector): boolean {
     return this.explored.get(pos)
   }
 
-  getVisible(pos: Vector): boolean {
+  getVisible (pos: Vector): boolean {
     // This translates absolute coordinates on the map to coordinates relative to the "visibility square".
     // TODO: Maybe it's a stupid idea to ask for any position outside the visible range.
     const offset = new Vector(this.visibilityRadius, this.visibilityRadius)

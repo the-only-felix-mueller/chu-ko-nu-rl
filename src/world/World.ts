@@ -35,6 +35,22 @@ export class World {
       this.map.set(new Vector(x, y), content === 1 ? TileType.WALL : TileType.FLOOR)
     })
 
+    // Placing torches next to doors: (1 tile between)
+    const rooms = mapgenerator.getRooms()
+    rooms.forEach(room => {
+      room.getDoors((x, y) => {
+        const neighbors = [
+          new Vector(x + 2, y), new Vector(x, y + 2),
+          new Vector(x - 2, y), new Vector(x, y - 2)
+        ]
+        neighbors.forEach(neighbor => {
+          if (this.map.get(neighbor) === TileType.WALL && ROT.RNG.getItem([true, false])) {
+            this.map.set(neighbor, TileType.TORCH)
+          }
+        })
+      })
+    })
+
     this.placeEntities()
 
     this.phase = this.expectingInput

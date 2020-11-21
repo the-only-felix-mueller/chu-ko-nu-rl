@@ -1,5 +1,5 @@
 export enum TileAppearance {
-    WALL, FLOOR
+    WALL, TORCH, FLOOR,
 }
 
 export class TileType {
@@ -11,6 +11,7 @@ export class TileType {
   ) {};
   /* eslint-enable no-useless-constructor */
 
-  static readonly WALL = new TileType(TileAppearance.WALL);
-  static readonly FLOOR = new TileType(TileAppearance.FLOOR, false);
+  static readonly WALL = new TileType(TileAppearance.WALL)
+  static readonly TORCH = new TileType(TileAppearance.TORCH)
+  static readonly FLOOR = new TileType(TileAppearance.FLOOR, false)
 }

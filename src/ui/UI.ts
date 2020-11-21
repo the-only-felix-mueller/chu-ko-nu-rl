@@ -22,12 +22,14 @@ export class UI {
   readonly world: World
   private readonly dimensions: Vector
   private readonly center: Vector
-  private wispAnimationPhase: number // TODO generalize, put this in apperances.ts
+  private animationPhase: number
+  private darkTable: Map<string, string>
   private playerCharacter: PlayerCharacter
   private drawables: Drawable[]
 
   constructor () {
-    this.wispAnimationPhase = 0
+    this.animationPhase = 0
+    this.darkTable = new Map<string, string>()
     this.dimensions = new Vector(40, 26)
     this.center = new Vector(this.dimensions.x / 2, this.dimensions.y / 2)
     this.display = new ROT.Display({
@@ -128,11 +130,7 @@ export class UI {
    * Effects are temporary animations like projectiles, blood splatters or explosions.
    */
   animateAndDraw (): void {
-    const wispDescrition = 'a magical wisp'
-    const wispGlyphs = ['|', '/', '–', '\\']
-    const wispColors = ['#E4FF70', '#E0F470', '#FF9070']
-    appearances.entities.set(EntityAppearance.WISP, [wispDescrition, wispGlyphs[this.wispAnimationPhase % 4], wispColors[this.wispAnimationPhase % 3]])
-    this.wispAnimationPhase = (++this.wispAnimationPhase) % 12
+    this.animationPhase = (++this.animationPhase) % 360 // Animation cycles should be divisors of 360.
 
     if (!this.world.visibleEntityActions()) {
       // If there are no enemies in sight of the player nothing needs to get redrawn.
@@ -161,16 +159,29 @@ export class UI {
       for (let x = 0; x < this.dimensions.x; x++) {
         const absolutePos = this.relToAbs(new Vector(x, y))
         if (absolutePos.isWithinRect(this.world.dimensions) && this.playerCharacter.getExplored(absolutePos)) {
-          let [, glyph, fg, bg] = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
+          const appearance = appearances.tiles.get(this.world.map.get(absolutePos).appearance)
+          let glyph = appearance.getGlyph(this.animationPhase)
+          let fg = appearance.getFG(this.animationPhase)
+          let bg = appearance.getBG(this.animationPhase)
 
           const entityID = this.world.comps.position.atPosition(absolutePos)
           if (entityID) {
-            [, glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
+            // [, glyph, fg] = appearances.entities.get(this.world.comps.appearance.get(entityID))
+            const appearance = appearances.entities.get(this.world.comps.appearance.get(entityID))
+            glyph = appearance.getGlyph(this.animationPhase)
+            fg = appearance.getFG(this.animationPhase)
           }
           if (!this.playerCharacter.getVisible(absolutePos)) {
-            // TODO The dark colors should be calulated once only.
-            fg = darken(fg)
-            bg = darken(bg)
+            // "Memoisation". If all colors were registered
+            // at the start of the program, I could leave out the check.
+            if (!this.darkTable.has(fg)) {
+              this.darkTable.set(fg, darken(fg))
+            }
+            if (!this.darkTable.has(bg)) {
+              this.darkTable.set(bg, darken(bg))
+            }
+            fg = this.darkTable.get(fg)
+            bg = this.darkTable.get(bg)
           }
 
           this.display.draw(x, y, glyph, fg, bg)
@@ -259,7 +270,7 @@ export class UI {
           position: outerThis.world.getPlayerPos(),
           draw () {
             const neighborBackgrounds = directions.map((dir) =>
-              appearances.tiles.get(outerThis.world.map.get(this.position.add(dir)).appearance)[3])
+              appearances.tiles.get(outerThis.world.map.get(this.position.add(dir)).appearance).getBG(outerThis.animationPhase))
             const arrows = ['<', '^', '>', 'v'] // E, S, W, N
             const dirs = [Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.NORTH]
             dirs.forEach((dir: number) => {
@@ -278,13 +289,13 @@ export class UI {
           if (direction !== undefined) {
             drawableMarker.position = drawableMarker.position.add(directions[direction])
             const tileType = this.world.map.get(drawableMarker.position)
-            const tileDescription: string = appearances.tiles.get(tileType.appearance)[0]
+            const tileDescription: string = appearances.tiles.get(tileType.appearance).getDescription()
             const c = this.world.comps
             const entityID = c.position.atPosition(drawableMarker.position)
             console.log(`explored: ${this.playerCharacter.getExplored(drawableMarker.position)}`)
             console.log(`visible:  ${this.playerCharacter.getVisible(drawableMarker.position)}`)
             if (entityID) {
-              const description = appearances.entities.get(this.world.comps.appearance.get(entityID))[0]
+              const description = appearances.entities.get(this.world.comps.appearance.get(entityID)).getDescription()
               this.log(`You see ${description} on ${tileDescription}.`)
             } else {
               this.log(`You see ${tileDescription}.`)
